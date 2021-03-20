@@ -22,16 +22,12 @@ export default {
     };
   },
 
-  computed: {
-    peerLink() {
-      if (!this.peerId) return "";
-      return location.origin + location.pathname + "?p=" + this.peerId;
-    }
-  },
-
   methods: {
     copyPeerLink() {
-      navigator.clipboard.writeText(this.peerLink);
+      const url = new URL(window.location);
+      url.searchParams.set("p", this.peerId);
+      window.history.pushState({}, "", url);
+      navigator.clipboard.writeText(window.location.href);
     }
   },
 
@@ -53,7 +49,10 @@ export default {
       bindMainView(call);
     });
     this.peer.on("disconnected", () => this.peer.reconnect());
-    this.peer.on("error", err => console.log(err));
+    this.peer.on("error", err => {
+      console.log(err);
+      this.friendPeerId = null;
+    });
 
     navigator.mediaDevices
       .getUserMedia({ audio: true, video: true })
@@ -85,7 +84,8 @@ body {
 .call-btn {
   position: fixed;
   bottom: 50%;
-  right: 50%;
+  left: 50%;
+  margin-left: -24px;
 }
 
 .main-view {
