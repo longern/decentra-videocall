@@ -52,6 +52,7 @@ export default {
       call.answer(this.$refs.selfView.srcObject);
       bindMainView(call);
     });
+    this.peer.on("disconnected", () => this.peer.reconnect());
     this.peer.on("error", err => console.log(err));
 
     navigator.mediaDevices
