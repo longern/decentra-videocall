@@ -7,6 +7,7 @@
   <video ref="mainView" class="main-view"></video>
   <video ref="selfView" muted class="self-view"></video>
   <div v-if="wechatSharing && !friendPeerId" class="share">点击右上角分享会话链接</div>
+  <div v-if="linkCopied && !friendPeerId" class="share">会话链接已复制</div>
 </template>
 
 <script>
@@ -21,8 +22,9 @@ export default {
   data() {
     const peerIdMatch = location.search.match(/p=([\da-f-]*)/);
     return {
-      peerId: null,
       friendPeerId: peerIdMatch ? peerIdMatch[1] : null,
+      linkCopied: false,
+      peerId: null,
       wechatSharing: false
     };
   },
@@ -37,8 +39,10 @@ export default {
         desc: "您的好友正邀请您进行视频通话"
       });
       try {
-        if (navigator.userAgent.indexOf("MicroMessenger") > -1) {
-          this.ua = navigator.userAgent.indexOf("MicroMessenger");
+        if (navigator.userAgent.indexOf("Windows NT") > -1) {
+          this.linkCopied = true;
+          navigator.clipboard.writeText(url);
+        } else if (navigator.userAgent.indexOf("MicroMessenger") > -1) {
           this.wechatSharing = true;
           window.history.pushState({}, "", url);
         } else nativeShare.call();
@@ -127,7 +131,7 @@ body {
 .self-view {
   position: fixed;
   top: 0;
-  right: 0;
+  left: 0;
   max-width: 50vw;
   max-height: 30vh;
   transform: rotateY(180deg);
