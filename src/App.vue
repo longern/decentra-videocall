@@ -8,6 +8,7 @@
   <video ref="selfView" muted class="self-view"></video>
   <div v-if="wechatSharing && !friendPeerId" class="share">点击右上角分享会话链接</div>
   <div v-if="linkCopied && !friendPeerId" class="share">会话链接已复制</div>
+  <div v-if="errorMessage" v-text="errorMessage" class="share"></div>
 </template>
 
 <script>
@@ -17,11 +18,44 @@ import Peer from "peerjs";
 let peer = null;
 const nativeShare = new NativeShare();
 
+// Polyfill from https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia
+// Older browsers might not implement mediaDevices at all, so we set an empty object first
+if (navigator.mediaDevices === undefined) {
+  navigator.mediaDevices = {};
+}
+
+// Some browsers partially implement mediaDevices. We can't just assign an object
+// with getUserMedia as it would overwrite existing properties.
+// Here, we will just add the getUserMedia property if it's missing.
+if (navigator.mediaDevices.getUserMedia === undefined) {
+  navigator.mediaDevices.getUserMedia = function(constraints) {
+    // First get ahold of the legacy getUserMedia, if present
+    var getUserMedia =
+      navigator.getUserMedia ||
+      navigator.webkitGetUserMedia ||
+      navigator.mozGetUserMedia;
+
+    // Some browsers just don't implement it - return a rejected promise with an error
+    // to keep a consistent interface
+    if (!getUserMedia) {
+      return Promise.reject(
+        new Error("getUserMedia is not implemented in this browser")
+      );
+    }
+
+    // Otherwise, wrap the call to the old navigator.getUserMedia with a Promise
+    return new Promise(function(resolve, reject) {
+      getUserMedia.call(navigator, constraints, resolve, reject);
+    });
+  };
+}
+
 export default {
   name: "App",
   data() {
     const peerIdMatch = location.search.match(/p=([\da-f-]*)/);
     return {
+      errorMessage: "",
       friendPeerId: peerIdMatch ? peerIdMatch[1] : null,
       linkCopied: false,
       peerId: null,
@@ -71,7 +105,7 @@ export default {
     });
     peer.on("disconnected", () => peer.reconnect());
     peer.on("error", err => {
-      console.log(err);
+      this.errorMessage = err.toString();
       this.friendPeerId = null;
     });
 
@@ -85,7 +119,8 @@ export default {
             bindMainView(peer.call(this.friendPeerId, mediaStream));
           });
         }
-      });
+      })
+      .catch(err => (this.errorMessage = err.toString()));
   }
 };
 </script>
