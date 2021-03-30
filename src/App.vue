@@ -94,6 +94,12 @@ export default {
       call.on("stream", mediaStream => {
         this.$refs.mainView.srcObject = mediaStream;
       });
+      call.peerConnection.addEventListener("iceconnectionstatechange", () => {
+        if (call.peerConnection.iceConnectionState === "disconnected") {
+          this.$refs.mainView.srcObject = null;
+          this.friendPeerId = null;
+        }
+      });
     };
 
     peer = new Peer();
